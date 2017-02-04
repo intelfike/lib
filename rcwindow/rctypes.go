@@ -153,14 +153,10 @@ func (rc *RCConfig) RedrawTick(tick time.Duration) {
 	}()
 }
 func (rc *RCConfig) Clear() {
-	rc.mx.Lock()
-	defer rc.mx.Unlock()
 	switch rc.state {
 	case "running", "waiting":
-		for range rc.Dots.Get().([]*Dot) {
-			rc.Dots.Write(nil)
-		}
-		rc.Draw()
+		rc.Dots.Clear()
+		rc.Redraw()
 	}
 }
 func (rc *RCConfig) Wait() {

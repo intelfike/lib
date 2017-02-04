@@ -12,6 +12,8 @@ type RingBuf struct {
 	count int
 }
 
+var _ fmt.Stringer = RingBuf{}
+
 // Exsample:
 // New(make([]int, 22))
 func New(i interface{}) (*RingBuf, error) {
@@ -36,48 +38,63 @@ func MustNew(i interface{}) *RingBuf {
 // i[len(i) - 1] = the most new
 // write to ring buffer.
 func (s *RingBuf) Write(i interface{}) {
-	if s.Len() == 0 {
+	if s.Cap() == 0 {
 		return
 	}
 	s.val.Index(s.index).Set(reflect.ValueOf(i))
 	s.index++
-	s.index %= s.val.Len()
-	if s.count < s.Len() {
+	s.index %= s.Cap()
+	if s.count < s.Cap() {
 		s.count++
 	}
 }
 
+func (s *RingBuf) Clear() {
+	s.count = 0
+}
+
 // Get older element.
 // 0 is the most old.
-func (s *RingBuf) IndexOld(i int) interface{} {
-	index := s.LoopModLen(i + s.index)
+func (s RingBuf) IndexOld(i int) interface{} {
+	if s.Len() == 0 {
+		return nil
+	}
+	index := LoopMod(i+s.index, s.Len())
 	return s.val.Index(index)
 }
 
 // Get newer element.
 // 0 is the most new.
-func (s *RingBuf) IndexNew(i int) interface{} {
+func (s RingBuf) IndexNew(i int) interface{} {
 	return s.IndexOld(-1 - i)
 }
 
 // Get slice in interface{}.
 // Type assert is yourself.
-func (s *RingBuf) Get() interface{} {
-	start := s.val.Slice(s.index, s.val.Len())
-	end := s.val.Slice(0, s.index)
-	return reflect.AppendSlice(start, end).Interface()
+func (s RingBuf) Get() interface{} {
+	return s.getValue().Interface()
 }
 
-func (s *RingBuf) GetOnlyNew() interface{} {
-	defer func() { s.count = 0 }()
-	start := s.val.Slice(s.index, s.val.Len())
+// reflect.Value
+func (s RingBuf) getValue() reflect.Value {
+	start := s.val.Slice(s.index, s.Cap())
 	end := s.val.Slice(0, s.index)
-	return reflect.AppendSlice(start, end).Slice(s.Len()-s.count, s.Len()).Interface()
+	return reflect.AppendSlice(start, end).Slice(s.Cap()-s.Len(), s.Cap())
 }
 
 // Get() to string.
 func (s RingBuf) String() string {
 	return fmt.Sprint(s.Get())
+}
+
+// writed length.
+func (s RingBuf) Len() int {
+	return s.count
+}
+
+// The return value is the slice size decided by New() Argument.
+func (s RingBuf) Cap() int {
+	return s.val.Len()
 }
 
 // -1 % 3 != -1:
@@ -88,12 +105,4 @@ func LoopMod(i, j int) int {
 		mod += j
 	}
 	return mod
-}
-
-func (s RingBuf) LoopModLen(i int) int {
-	return LoopMod(i, s.val.Len())
-}
-
-func (s RingBuf) Len() int {
-	return s.val.Len()
 }

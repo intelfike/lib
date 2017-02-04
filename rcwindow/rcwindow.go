@@ -137,13 +137,14 @@ func xyWindow(rc *RCConfig) {
 			case paint.Event:
 				//win.Send(size.Event{WidthPx:rc.width, HeightPx:rc.height})
 				rc.mx.Lock()
-				for _, v := range rc.Dots.GetOnlyNew().([]*Dot) {
+				for _, v := range rc.Dots.Get().([]*Dot) {
 					if v == nil {
 						continue
 					}
 					x, y := rc.parse(v.x, v.y)
 					rectDraw(x-rc.DotSize/2, y-rc.DotSize/2, x+int(float64(rc.DotSize)/2.0+0.5), y+int(float64(rc.DotSize)/2.0+0.5), v.col)
 				}
+				// fmt.Println(rc.Dots)
 
 				rc.mx.Unlock()
 				//更新
