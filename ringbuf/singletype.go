@@ -1,61 +1,86 @@
 package ringbuf
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
 
-type SingleRingBuf struct {
-	Val   reflect.Value
-	Index int
+type RingBuf struct {
+	val   reflect.Value
+	index int
+	count int
 }
 
 // Exsample:
-// NewSingleType(make([]int, 22))
-func NewSingleType(i interface{}) SingleRingBuf {
-	srb := *new(SingleRingBuf)
-	srb.Val = reflect.ValueOf(i)
+// New(make([]int, 22))
+func New(i interface{}) (*RingBuf, error) {
+	srb := new(RingBuf)
+	srb.val = reflect.ValueOf(i)
 
-	if srb.Val.Kind() != reflect.Slice {
-		panic("Argument of NewSingleType({}interface) is Slice only: Exsample -> make([]int, 2)")
+	if srb.val.Kind() != reflect.Slice {
+		return nil, errors.New("Argument of NewSingleType({}interface) is Slice only: Exsample -> make([]int, 2)")
 	}
-	return srb
+	return srb, nil
 }
 
+func MustNew(i interface{}) *RingBuf {
+	ring, err := New(i)
+	if err != nil {
+		panic(err)
+	}
+	return ring
+}
+
+// i[0] = the most old
+// i[len(i) - 1] = the most new
 // write to ring buffer.
-func (s *SingleRingBuf) Write(i interface{}) {
-	s.Val.Index(s.Index).Set(reflect.ValueOf(i))
-	s.Index++
-	s.Index %= s.Val.Len()
+func (s *RingBuf) Write(i interface{}) {
+	if s.Len() == 0 {
+		return
+	}
+	s.val.Index(s.index).Set(reflect.ValueOf(i))
+	s.index++
+	s.index %= s.val.Len()
+	if s.count < s.Len() {
+		s.count++
+	}
 }
 
 // Get older element.
 // 0 is the most old.
-func (s *SingleRingBuf) IndexOld(i int) interface{} {
-	index := s.LoopModLen(i + s.Index)
-	return s.Val.Index(index)
+func (s *RingBuf) IndexOld(i int) interface{} {
+	index := s.LoopModLen(i + s.index)
+	return s.val.Index(index)
 }
 
 // Get newer element.
 // 0 is the most new.
-func (s *SingleRingBuf) IndexNew(i int) interface{} {
+func (s *RingBuf) IndexNew(i int) interface{} {
 	return s.IndexOld(-1 - i)
 }
 
 // Get slice in interface{}.
 // Type assert is yourself.
-func (s *SingleRingBuf) Get() interface{} {
-	start := s.Val.Slice(s.Index, s.Val.Len())
-	end := s.Val.Slice(0, s.Index)
+func (s *RingBuf) Get() interface{} {
+	start := s.val.Slice(s.index, s.val.Len())
+	end := s.val.Slice(0, s.index)
 	return reflect.AppendSlice(start, end).Interface()
 }
 
+func (s *RingBuf) GetOnlyNew() interface{} {
+	defer func() { s.count = 0 }()
+	start := s.val.Slice(s.index, s.val.Len())
+	end := s.val.Slice(0, s.index)
+	return reflect.AppendSlice(start, end).Slice(s.Len()-s.count, s.Len()).Interface()
+}
+
 // Get() to string.
-func (s SingleRingBuf) String() string {
+func (s RingBuf) String() string {
 	return fmt.Sprint(s.Get())
 }
 
-// -1 % 3 != -1
+// -1 % 3 != -1:
 // -1 % 3 == 2
 func LoopMod(i, j int) int {
 	mod := i % j
@@ -65,10 +90,10 @@ func LoopMod(i, j int) int {
 	return mod
 }
 
-func (s SingleRingBuf) LoopModLen(i int) int {
-	return LoopMod(i, s.Val.Len())
+func (s RingBuf) LoopModLen(i int) int {
+	return LoopMod(i, s.val.Len())
 }
 
-func (s SingleRingBuf) Len() int {
-	return s.Val.Len()
+func (s RingBuf) Len() int {
+	return s.val.Len()
 }
