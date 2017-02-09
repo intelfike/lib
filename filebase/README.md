@@ -1,3 +1,12 @@
+# update/refer to json like firebase(web).
+This is golang package.<br>
+firebase(web)っぽくjsonを加工・参照できるgolangのパッケージです。
+
+## install
+command
+
+```go get github.com/intelfike/lib/filebase```
+
 ## usage
 
 Disp json node if [class == A]<br>
@@ -68,8 +77,6 @@ type Filebase
 ```
     func (f Filebase) Child(path ...interface{}) *Filebase
     func (f Filebase) Root() *Filebase
-    func (f Filebase) Keys() ([]string, error)
-    func (f Filebase) Len() (int, error)
 ```
 
 ### Getter func
@@ -77,6 +84,8 @@ type Filebase
 ```
     func (f Filebase) GetInterface() (*interface{}, error)
     func (f Filebase) String() string
+    func (f Filebase) Keys() ([]string, error)
+    func (f Filebase) Len() (int, error)
 ```
 
 ### Setter func
