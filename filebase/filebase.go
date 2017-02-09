@@ -15,10 +15,14 @@ type Filebase struct {
 }
 
 // file name to *Filebase.
-func NewFile(name string) (*Filebase, error) {
-	file, _ := os.Open("./data.txt")
+func NewByFile(name string) (*Filebase, error) {
+	file, _ := os.Open(name)
+	return NewByReader(file)
+}
+
+func NewByReader(reader io.Reader) (*Filebase, error) {
 	b := new(bytes.Buffer)
-	io.Copy(b, file)
+	io.Copy(b, reader)
 	return New(b.Bytes())
 }
 
@@ -188,6 +192,8 @@ func (f Filebase) Keys() ([]string, error) {
 	return nil, errors.New("KeyList() => json not map")
 }
 
+//This get len, check if array.
+//
 // If json node is array then return len(array) & nil.
 //
 // else then return -1 & error.
