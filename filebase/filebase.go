@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 )
@@ -13,6 +14,8 @@ type Filebase struct {
 	master interface{}
 	path   []interface{}
 }
+
+var _ fmt.Stringer = Filebase{}
 
 // file name to *Filebase.
 func NewByFile(name string) (*Filebase, error) {

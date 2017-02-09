@@ -1,6 +1,6 @@
 ## usage
 
-Disp json node [Class == A]<br>
+Disp json node if [class == A]<br>
 
 ```
 jsonData := `
@@ -12,11 +12,11 @@ jsonData := `
     {"id": 5,"name": "ナカヤマ","class": "B"} 
 ]
 `
-fb, _ := filebase.NewByFile("data.json")
+fb, _ := filebase.New([]byte(jsonData))
 length, _ := fb.Len()
 for n := 0; n < length; n++{
     if fb.Child(n, "class").String() == `"A"`{
-        fmt.Println(fb.Child(n)) // ↓output↓
+        fmt.Println(fb.Child(n)) // ↓[output]↓
     }
 }
 ```
@@ -36,22 +36,61 @@ output
 }
 ```
 
-## ???
-Q. How to change indent?<br>
-A. Can't. <br>
+## type and func
 
-type Filebase <br>
-    func New(b []byte) (*Filebase, error)<br>
-    func NewByFile(name string) (*Filebase, error)<br>
-    func NewByReader(reader io.Reader) (*Filebase, error)<br>
-    func (f Filebase) Child(path ...interface{}) *Filebase<br>
-    func (f *Filebase) Fpush(fb *Filebase)<br>
-    func (f *Filebase) Fset(fb *Filebase)<br>
-    func (f Filebase) GetInterface() (*interface{}, error)<br>
-    func (f Filebase) Keys() ([]string, error)<br>
-    func (f Filebase) Len() (int, error)<br>
-    func (f *Filebase) Push(i interface{})<br>
-    func (f Filebase) Root() *Filebase<br>
-    func (f *Filebase) Set(i interface{}) error<br>
-    func (f Filebase) String() string<br>
-    <br>
+```
+type Filebase 
+    func New(b []byte) (*Filebase, error)
+    func NewByFile(name string) (*Filebase, error)
+    func NewByReader(reader io.Reader) (*Filebase, error)
+    func (f Filebase) Child(path ...interface{}) *Filebase
+    func (f *Filebase) Fpush(fb *Filebase)
+    func (f *Filebase) Fset(fb *Filebase)
+    func (f Filebase) GetInterface() (*interface{}, error)
+    func (f Filebase) Keys() ([]string, error)
+    func (f Filebase) Len() (int, error)
+    func (f *Filebase) Push(i interface{})
+    func (f Filebase) Root() *Filebase
+    func (f *Filebase) Set(i interface{}) error
+    func (f Filebase) String() string
+```
+
+### Maker func
+
+```
+    func New(b []byte) (*Filebase, error)
+    func NewByFile(name string) (*Filebase, error)
+    func NewByReader(reader io.Reader) (*Filebase, error)
+```
+
+### Referer func
+
+```
+    func (f Filebase) Child(path ...interface{}) *Filebase
+    func (f Filebase) Root() *Filebase
+    func (f Filebase) Keys() ([]string, error)
+    func (f Filebase) Len() (int, error)
+```
+
+### Getter func
+
+```
+    func (f Filebase) GetInterface() (*interface{}, error)
+    func (f Filebase) String() string
+```
+
+### Setter func
+
+```
+    func (f *Filebase) Fpush(fb *Filebase)
+    func (f *Filebase) Fset(fb *Filebase)
+    func (f *Filebase) Push(i interface{})
+    func (f *Filebase) Set(i interface{}) error
+```
+
+### TODO: func
+
+```
+    func (f *Filebase) Remove() error
+    func (f *Filebase) Empty() error
+```
