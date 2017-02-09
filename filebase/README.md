@@ -94,14 +94,18 @@ int => refer array (overflow => panic()/panic()) <br>
 GetInterface() => If you want to do type switch then use this.<br>
 But do not often use it for eliminate mistake because hard to use.<br>
 <br>
-String() => You can do type switch with regexp.<br>
+String() => You can do type switch with regexp too.<br>
+Auto indent by tab.<br>
+
+```
 [regexp(string value) => type] <br>
-".*" => string <br>
-[1-9][0-9]* => int <br>
-[1-9][0-9]*.[0-9]*[1-9] => float <br>
-(true|false) => bool <br>
-null => null <br>
-nil => [NotHasChild] <br>
+    ".*" => string <br>
+    [1-9][0-9]* => int <br>
+    [1-9][0-9]*.[0-9]*[1-9] => float <br>
+    (true|false) => bool <br>
+    null => null <br>
+    nil => [NotHasChild] <br>
+```
 <br>
 Keys() => map keys (not map => Error!) <br>
 Len() => array length (not array => Error!) <br>
