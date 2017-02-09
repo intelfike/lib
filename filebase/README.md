@@ -58,7 +58,9 @@ type Filebase
     func (f Filebase) GetInterface() (*interface{}, error)
     func (f Filebase) Keys() ([]string, error)
     func (f Filebase) Len() (int, error)
+    func (f Filebase) Parent() *Filebase
     func (f *Filebase) Push(i interface{})
+    func (f *Filebase) Remove()
     func (f Filebase) Root() *Filebase
     func (f *Filebase) Set(i interface{}) error
     func (f Filebase) String() string
@@ -76,6 +78,7 @@ type Filebase
 
 ```
     func (f Filebase) Child(path ...interface{}) *Filebase
+    func (f Filebase) Parent() *Filebase
     func (f Filebase) Root() *Filebase
 ```
 Child(...interface{} => string or int) <br>
@@ -117,16 +120,11 @@ Len() => array length (not array => Error!) <br>
     func (f *Filebase) Fset(fb *Filebase)
     func (f *Filebase) Push(i interface{})
     func (f *Filebase) Set(i interface{}) error
+    func (f *Filebase) Remove()
 ```
-Set() => map appender & value setter<br>
-Push() => array appender <br>
+Set() => append map or set value<br>
+Push() => append array <br>
 
-### TODO: func
-
-```
-    func (f *Filebase) Remove() error
-    func (f *Filebase) Empty() error
-```
 
 ## Licence
 MIT(適当)

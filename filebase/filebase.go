@@ -11,7 +11,7 @@ import (
 )
 
 type Filebase struct {
-	master interface{}
+	master *interface{}
 	path   []interface{}
 }
 
@@ -32,7 +32,8 @@ func NewByReader(reader io.Reader) (*Filebase, error) {
 // Byte data to *Filebase
 func New(b []byte) (*Filebase, error) {
 	fb := new(Filebase)
-	err := json.Unmarshal(b, &fb.master)
+	fb.master = new(interface{})
+	err := json.Unmarshal(b, fb.master)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,8 @@ func New(b []byte) (*Filebase, error) {
 //
 // Can't make array.
 func (f *Filebase) Set(i interface{}) error {
-	cur := &f.master
+	cur := new(interface{})
+	*cur = *f.master
 	if len(f.path) == 0 {
 		*cur = i
 		return nil
@@ -124,14 +126,29 @@ func (f *Filebase) Push(i interface{}) {
 
 // Set() => Filebase to Filebase.
 func (f *Filebase) Fset(fb *Filebase) {
-	v, _ := f.GetInterface()
+	v, _ := fb.GetInterface()
 	f.Set(*v)
 }
 
-// Push() =? Filebase to Filebase.
+// Push() => Filebase to Filebase.
 func (f *Filebase) Fpush(fb *Filebase) {
-	v, _ := f.GetInterface()
+	v, _ := fb.GetInterface()
 	f.Push(*v)
+}
+
+// Remove() remove map or array element
+func (f *Filebase) Remove() {
+	path := f.path[len(f.path)-1]
+	i, _ := f.Parent().GetInterface()
+	switch t := path.(type) {
+	case string:
+		delete((*i).(map[string]interface{}), t)
+	case int:
+		arr := (*i).([]interface{})
+		f.Parent().Set(append(arr[:t], arr[t+1:]...))
+	default:
+		panic("Child()")
+	}
 }
 
 // If you want to do type switch then use this.
@@ -142,7 +159,8 @@ func (f *Filebase) Fpush(fb *Filebase) {
 //
 // This function get interface{} pinter.
 func (f Filebase) GetInterface() (*interface{}, error) {
-	cur := &f.master
+	cur := new(interface{})
+	*cur = *f.master
 	for _, pathv := range f.path {
 		switch pt := pathv.(type) {
 		case string:
@@ -179,11 +197,24 @@ func (f Filebase) Child(path ...interface{}) *Filebase {
 	return &f
 }
 
+// Get json parent.
+func (f Filebase) Parent() *Filebase {
+	if len(f.path) == 0 {
+		panic("root has not parent.")
+		return nil
+	}
+	f.path = f.path[:len(f.path)-1]
+	return &f
+}
+
 // If json node is map then return key list & nil.
 //
 // else then return nil & error.
 func (f Filebase) Keys() ([]string, error) {
 	v, _ := f.GetInterface()
+	if v == nil {
+		return nil, errors.New("json node equal nil or not has.")
+	}
 	s := []string{}
 	switch t := (*v).(type) {
 	case map[string]interface{}:
@@ -202,6 +233,9 @@ func (f Filebase) Keys() ([]string, error) {
 // else then return -1 & error.
 func (f Filebase) Len() (int, error) {
 	v, _ := f.GetInterface()
+	if v == nil {
+		return -1, errors.New("json node equal nil or not has.")
+	}
 	switch t := (*v).(type) {
 	case []interface{}:
 		return len(t), nil
