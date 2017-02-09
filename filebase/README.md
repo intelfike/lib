@@ -78,6 +78,9 @@ type Filebase
     func (f Filebase) Child(path ...interface{}) *Filebase
     func (f Filebase) Root() *Filebase
 ```
+Child(...interface{} => string or int) <br>
+string => refer map (has not child => return nil/make child) <br>
+int => refer array (overflow => panic()/panic()) <br>
 
 ### Getter func
 
@@ -88,6 +91,21 @@ type Filebase
     func (f Filebase) Len() (int, error)
 ```
 
+GetInterface() => If you want to do type switch then use this.<br>
+But do not often use it for eliminate mistake because hard to use.<br>
+<br>
+String() => You can do type switch with regexp.<br>
+[regexp(string value) => type] <br>
+".*" => string <br>
+[1-9][0-9]* => int <br>
+[1-9][0-9]*.[0-9]*[1-9] => float <br>
+(true|false) => bool <br>
+null => null <br>
+nil => [NotHasChild] <br>
+<br>
+Keys() => map keys (not map => Error!) <br>
+Len() => array length (not array => Error!) <br>
+
 ### Setter func
 
 ```
@@ -96,6 +114,8 @@ type Filebase
     func (f *Filebase) Push(i interface{})
     func (f *Filebase) Set(i interface{}) error
 ```
+Set() => map appender & value setter<br>
+Push() => array appender <br>
 
 ### TODO: func
 
@@ -103,3 +123,6 @@ type Filebase
     func (f *Filebase) Remove() error
     func (f *Filebase) Empty() error
 ```
+
+## Licence
+MIT(適当)
