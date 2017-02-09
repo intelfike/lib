@@ -48,12 +48,12 @@ func New(b []byte) (*Filebase, error) {
 //
 // Can't make array.
 func (f *Filebase) Set(i interface{}) error {
-	cur := new(interface{})
-	*cur = *f.master
 	if len(f.path) == 0 {
-		*cur = i
+		*f.master = i
 		return nil
 	}
+	cur := new(interface{})
+	*cur = *f.master
 	prev := *cur
 	prevkey := ""
 	_ = prevkey
