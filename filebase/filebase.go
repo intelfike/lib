@@ -190,6 +190,7 @@ func (f Filebase) GetInterface() (*interface{}, error) {
 	return cur, nil
 }
 
+// loop map or array
 func (f Filebase) Each(fn func(*Filebase)) {
 	length, err := f.Len()
 	if err == nil {
@@ -227,7 +228,7 @@ func (f Filebase) Parent() *Filebase {
 	return &f
 }
 
-// current of f => root of return value
+// f location become to new json root
 func (f Filebase) Clone() (*Filebase, error) {
 	p, err := f.GetInterface()
 	if err != nil {

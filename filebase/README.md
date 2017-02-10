@@ -1,6 +1,7 @@
 # update/refer to json like firebase(web).
-This is golang package.<br>
-firebase(web)っぽくjsonを加工・参照できるgolangのパッケージです。
+You do not need to directly manipulate complex nested interface{}<br>
+firebase(web)っぽくjsonを加工・参照できるgolangのパッケージです。<br>
+あなたが複雑なinterface{}を直接操作する必要はありません。<br>
 
 ## install
 command
@@ -54,25 +55,12 @@ output
 }
 ```
 
-## type and func
+## type and func list
+
+### type
 
 ```
-type Filebase 
-    func New(b []byte) (*Filebase, error)
-    func NewByFile(name string) (*Filebase, error)
-    func NewByReader(reader io.Reader) (*Filebase, error)
-    func (f Filebase) Child(path ...interface{}) *Filebase
-    func (f *Filebase) Fpush(fb *Filebase)
-    func (f *Filebase) Fset(fb *Filebase)
-    func (f Filebase) GetInterface() (*interface{}, error)
-    func (f Filebase) Keys() ([]string, error)
-    func (f Filebase) Len() (int, error)
-    func (f Filebase) Parent() *Filebase
-    func (f *Filebase) Push(i interface{})
-    func (f *Filebase) Remove()
-    func (f Filebase) Root() *Filebase
-    func (f *Filebase) Set(i interface{}) error
-    func (f Filebase) String() string
+    type Filebase struct{...}
 ```
 
 ### Maker func
@@ -110,13 +98,13 @@ String() => You can do type switch with regexp too.<br>
 Auto indent by tab.<br>
 
 ```
-[regexp(string value) => type] <br>
-    ".*" => string <br>
-    [1-9][0-9]* => int <br>
-    [1-9][0-9]*.[0-9]*[1-9] => float <br>
-    (true|false) => bool <br>
-    null => null <br>
-    nil => [NotHasChild] <br>
+[regexp(string value) => type] 
+    ".*" => string 
+    [1-9][0-9]* => int 
+    [1-9][0-9]*.[0-9]*[1-9] => float 
+    (true|false) => bool 
+    null => null 
+    nil => [NotHasChild] 
 ```
 <br>
 Keys() => map keys (not map => Error!) <br>
