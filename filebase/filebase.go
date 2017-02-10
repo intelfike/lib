@@ -11,9 +11,8 @@ import (
 )
 
 type Filebase struct {
-	masterBytes []byte
-	master      *interface{}
-	path        []interface{}
+	master *interface{}
+	path   []interface{}
 }
 
 var _ fmt.Stringer = Filebase{}
@@ -33,7 +32,6 @@ func NewByReader(reader io.Reader) (*Filebase, error) {
 // Byte data to *Filebase
 func New(b []byte) (*Filebase, error) {
 	fb := new(Filebase)
-	fb.masterBytes = b
 	fb.master = new(interface{})
 	err := json.Unmarshal(b, fb.master)
 	if err != nil {
@@ -230,15 +228,11 @@ func (f Filebase) Parent() *Filebase {
 
 // f location become to new json root
 func (f Filebase) Clone() (*Filebase, error) {
-	p, err := f.GetInterface()
+	b, err := f.Bytes()
 	if err != nil {
 		return nil, err
 	}
 	newfb := new(Filebase)
-	b, err := json.Marshal(*p)
-	if err != nil {
-		return nil, err
-	}
 	newfb.master = new(interface{})
 	json.Unmarshal(b, newfb.master)
 	return newfb, nil
@@ -294,10 +288,18 @@ func (f Filebase) Len() (int, error) {
 //  if fb.Child("id") == "null"{} // null value
 //  if Child("id???") == "nil"{} // not has child!
 func (f Filebase) String() string {
-	v, err := f.GetInterface()
+	b, err := f.Bytes()
 	if err != nil {
 		return "nil"
 	}
-	b, _ := json.MarshalIndent(*v, "", "\t")
 	return string(b)
+}
+
+func (f Filebase) Bytes() ([]byte, error) {
+	v, err := f.GetInterface()
+	if err != nil {
+		return nil, errors.New("has not child")
+	}
+	b, _ := json.MarshalIndent(*v, "", "\t")
+	return b, nil
 }
