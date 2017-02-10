@@ -9,25 +9,34 @@ command
 
 ## usage
 
-Disp json node if [class == A]<br>
+Append array <br>
+↓<br>
+Display json node if [class == A]<br>
 
 ```
 jsonData := `
 [
     {"id": 1,"name": "タカハシ","class": "A" },
-    {"id": 2,"name": "スズキ","class": "A" },
+    {"id": 2,"name": "スズキ","class": "B" },
     {"id": 3,"name": "タナカ","class": "B"},
-    {"id": 4,"name": "イシバシ","class": "B"},
-    {"id": 5,"name": "ナカヤマ","class": "B"} 
+    {"id": 4,"name": "イシバシ","class": "C"},
+    {"id": 5,"name": "ナカヤマ","class": "C"} 
 ]
 `
 fb, _ := filebase.New([]byte(jsonData))
-length, _ := fb.Len()
-for n := 0; n < length; n++{
-    if fb.Child(n, "class").String() == `"A"`{
-        fmt.Println(fb.Child(n)) // ↓[output]↓
+
+// Add Data
+item, _ := fb.Child(0).Clone() // value copy
+item.Child("id").Set(6)
+item.Child("name").Set("トクガワ")
+fb.Fpush(item) // like append()
+
+// Display [class == "A"]
+fb.Each(func(f *filebase.Filebase) {
+    if f.Child("class").String() == `"A"` {
+        fmt.Println(f) // ↓[output]↓
     }
-}
+})
 ```
 
 output
@@ -40,8 +49,8 @@ output
 }
 {
         "class": "A",
-        "id": 2,
-        "name": "スズキ"
+        "id": 6,
+        "name": "トクガワ"
 }
 ```
 
@@ -125,6 +134,12 @@ Len() => array length (not array => Error!) <br>
 Set() => append map or set value<br>
 Push() => append array <br>
 
+### Other func
+```
+    func (f Filebase) Clone() (*Filebase, error) {
+```
+Clone() => value copy. <br>
+"f" location become to new json root.
 
 ## Licence
 MIT(適当)

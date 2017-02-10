@@ -11,8 +11,9 @@ import (
 )
 
 type Filebase struct {
-	master *interface{}
-	path   []interface{}
+	masterBytes []byte
+	master      *interface{}
+	path        []interface{}
 }
 
 var _ fmt.Stringer = Filebase{}
@@ -32,6 +33,7 @@ func NewByReader(reader io.Reader) (*Filebase, error) {
 // Byte data to *Filebase
 func New(b []byte) (*Filebase, error) {
 	fb := new(Filebase)
+	fb.masterBytes = b
 	fb.master = new(interface{})
 	err := json.Unmarshal(b, fb.master)
 	if err != nil {
@@ -138,6 +140,9 @@ func (f *Filebase) Fpush(fb *Filebase) {
 
 // Remove() remove map or array element
 func (f *Filebase) Remove() {
+	if len(f.path) == 0 {
+		panic("can't remove root.")
+	}
 	path := f.path[len(f.path)-1]
 	i, _ := f.Parent().GetInterface()
 	switch t := path.(type) {
@@ -185,6 +190,21 @@ func (f Filebase) GetInterface() (*interface{}, error) {
 	return cur, nil
 }
 
+func (f Filebase) Each(fn func(*Filebase)) {
+	length, err := f.Len()
+	if err == nil {
+		for n := 0; n < length; n++ {
+			fn(f.Child(n))
+		}
+	}
+	keys, err := f.Keys()
+	if err == nil {
+		for _, key := range keys {
+			fn(f.Child(key))
+		}
+	}
+}
+
 // Get json root.
 func (f Filebase) Root() *Filebase {
 	f.path = make([]interface{}, 0)
@@ -205,6 +225,22 @@ func (f Filebase) Parent() *Filebase {
 	}
 	f.path = f.path[:len(f.path)-1]
 	return &f
+}
+
+// current of f => root of return value
+func (f Filebase) Clone() (*Filebase, error) {
+	p, err := f.GetInterface()
+	if err != nil {
+		return nil, err
+	}
+	newfb := new(Filebase)
+	b, err := json.Marshal(*p)
+	if err != nil {
+		return nil, err
+	}
+	newfb.master = new(interface{})
+	json.Unmarshal(b, newfb.master)
+	return newfb, nil
 }
 
 // If json node is map then return key list & nil.
