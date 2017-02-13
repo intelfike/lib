@@ -1,3 +1,5 @@
+# 現在大幅な仕様変更中で、README.mdは当てになりません
+
 # update/refer to json like firebase(web).
 You do not need to directly manipulate complex nested interface{}<br>
 firebase(web)っぽくjsonを加工・参照できるgolangのパッケージです。<br>
@@ -124,10 +126,12 @@ Push() => append array <br>
 
 ### Other func
 ```
-    func (f Filebase) Clone() (*Filebase, error) {
+    func (f Filebase) Clone() (*Filebase, error) 
+    func (f Filebase) Each(fn func(*Filebase))
 ```
 Clone() => value copy. <br>
-"f" location become to new json root.
+"f" location become to new json root.<br>
+Each() => loop map or array.<br>
 
 ## Licence
 MIT(適当)

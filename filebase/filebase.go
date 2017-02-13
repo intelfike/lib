@@ -13,31 +13,45 @@ import (
 type Filebase struct {
 	master *interface{}
 	path   []interface{}
+	Indent string
 }
 
 var _ fmt.Stringer = Filebase{}
 
 // file name to *Filebase.
-func NewByFile(name string) (*Filebase, error) {
-	file, _ := os.Open(name)
-	return NewByReader(file)
+func NewByFile(filename, indent string) (*Filebase, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	return NewByReader(file, indent)
 }
 
-func NewByReader(reader io.Reader) (*Filebase, error) {
+func NewByReader(reader io.Reader, indent string) (*Filebase, error) {
 	b := new(bytes.Buffer)
 	io.Copy(b, reader)
-	return New(b.Bytes())
+	return New(b.Bytes(), indent)
 }
 
 // Byte data to *Filebase
-func New(b []byte) (*Filebase, error) {
+func New(b []byte, indent string) (*Filebase, error) {
 	fb := new(Filebase)
+	fb.Indent = indent
 	fb.master = new(interface{})
 	err := json.Unmarshal(b, fb.master)
 	if err != nil {
 		return nil, err
 	}
 	return fb, nil
+}
+
+func (f *Filebase) WriteTo(w io.Writer) (int, error) {
+	return w.Write(f.BytesIndent())
+}
+
+func (f *Filebase) WriteToFile(filename string) (int, error) {
+	file, _ := os.Create(filename)
+	return f.WriteTo(file)
 }
 
 // if has child then
@@ -76,24 +90,26 @@ func (f *Filebase) Set(i interface{}) error {
 				for _, v := range f.path[n:] {
 					paths = append(paths, v.(string))
 				}
-				mapNest(prev.(map[string]interface{}), i, 0, paths...)
+				m, ok := prev.(map[string]interface{})
+				if !ok {
+
+					panic("can't map make")
+				}
+				mapNest(m, i, 0, paths...)
+				fmt.Println(m)
 				return nil
 			}
 			prevkey = pt
 		case int:
 			mas, ok := (*cur).([]interface{})
 			if !ok {
-				continue
+				return errors.New("JSON node is not array.")
 			}
-			if n != len(f.path)-1 {
-				*cur = mas[pt]
-				continue
+			if n == len(f.path)-1 { // 最後の要素なら
+				mas[pt] = i
+				return nil
 			}
-			// 最後の要素なら
-			// fmt.Println(mas, pt, i)
-			mas[pt] = i
-		default:
-			panic("Chilc(...interface{} => string or int)")
+			*cur = mas[pt]
 		}
 	}
 	return nil
@@ -113,44 +129,46 @@ func mapNest(m map[string]interface{}, val interface{}, depth int, s ...string) 
 // If json node is array then add i.
 //
 // else then set []interface{i} (initialize for array).
-func (f *Filebase) Push(i interface{}) {
-	_, err := f.Len()
-	if err != nil {
-		f.Set([]interface{}{i})
+func (f *Filebase) Push(a interface{}) {
+	if !f.IsArray() {
+		f.Set([]interface{}{a})
 		return
 	}
-	p, _ := f.GetInterface()
-	ar := (*p).([]interface{})
-	f.Set(append(ar, i))
+	i := f.Interface()
+	ar := i.([]interface{})
+	f.Set(append(ar, a))
 }
 
 // Set() => Filebase to Filebase.
 func (f *Filebase) Fset(fb *Filebase) {
-	v, _ := fb.GetInterface()
-	f.Set(*v)
+	i := fb.Interface()
+	f.Set(i)
 }
 
 // Push() => Filebase to Filebase.
 func (f *Filebase) Fpush(fb *Filebase) {
-	v, _ := fb.GetInterface()
-	f.Push(*v)
+	i := fb.Interface()
+	f.Push(i)
 }
 
 // Remove() remove map or array element
 func (f *Filebase) Remove() {
 	if len(f.path) == 0 {
-		panic("can't remove root.")
+		if f.IsArray() {
+			f.Set([]interface{}{})
+		} else if f.IsMap() {
+			f.Set(map[string]interface{}{})
+		}
+		return
 	}
 	path := f.path[len(f.path)-1]
-	i, _ := f.Parent().GetInterface()
+	i := f.Parent().Interface()
 	switch t := path.(type) {
 	case string:
-		delete((*i).(map[string]interface{}), t)
+		delete(i.(map[string]interface{}), t)
 	case int:
-		arr := (*i).([]interface{})
+		arr := i.([]interface{})
 		f.Parent().Set(append(arr[:t], arr[t+1:]...))
-	default:
-		panic("Child()")
 	}
 }
 
@@ -161,7 +179,7 @@ func (f *Filebase) Remove() {
 // Refer to String().
 //
 // This function get interface{} pinter.
-func (f Filebase) GetInterface() (*interface{}, error) {
+func (f Filebase) GetInterfacePt() (*interface{}, error) {
 	cur := new(interface{})
 	*cur = *f.master
 	for _, pathv := range f.path {
@@ -169,20 +187,18 @@ func (f Filebase) GetInterface() (*interface{}, error) {
 		case string:
 			mas, ok := (*cur).(map[string]interface{})
 			if !ok {
-				continue
+				return nil, errors.New("JSON node is not map")
 			}
 			*cur, ok = mas[pt]
 			if !ok {
-				return nil, errors.New("Data is not found")
+				return nil, errors.New("JSON node not found.")
 			}
 		case int:
 			mas, ok := (*cur).([]interface{})
 			if !ok {
-				continue
+				return nil, errors.New("JSON node is not array")
 			}
 			*cur = mas[pt]
-		default:
-			panic("Child(...interface{}.(type) == string or int)")
 		}
 	}
 	return cur, nil
@@ -190,71 +206,40 @@ func (f Filebase) GetInterface() (*interface{}, error) {
 
 // loop map or array
 func (f Filebase) Each(fn func(*Filebase)) {
-	length, err := f.Len()
-	if err == nil {
-		for n := 0; n < length; n++ {
+	if f.IsArray() {
+		for n := 0; n < f.Len(); n++ {
 			fn(f.Child(n))
 		}
 	}
-	keys, err := f.Keys()
-	if err == nil {
-		for _, key := range keys {
+	if f.IsMap() {
+		for _, key := range f.Keys() {
 			fn(f.Child(key))
 		}
 	}
 }
 
-// Get json root.
-func (f Filebase) Root() *Filebase {
-	f.path = make([]interface{}, 0)
-	return &f
-}
-
-// Child(...interface{}.(type) == string or int)
-func (f Filebase) Child(path ...interface{}) *Filebase {
-	f.path = append(f.path, path...)
-	return &f
-}
-
-// Get json parent.
-func (f Filebase) Parent() *Filebase {
-	if len(f.path) == 0 {
-		panic("root has not parent.")
-		return nil
-	}
-	f.path = f.path[:len(f.path)-1]
-	return &f
-}
-
 // f location become to new json root
 func (f Filebase) Clone() (*Filebase, error) {
-	b, err := f.Bytes()
-	if err != nil {
-		return nil, err
+	if !f.Exists() {
+		return nil, errors.New("JSON node not exists.")
 	}
 	newfb := new(Filebase)
+	newfb.Indent = f.Indent
 	newfb.master = new(interface{})
-	json.Unmarshal(b, newfb.master)
+	json.Unmarshal(f.Bytes(), newfb.master)
 	return newfb, nil
 }
 
 // If json node is map then return key list & nil.
 //
 // else then return nil & error.
-func (f Filebase) Keys() ([]string, error) {
-	v, _ := f.GetInterface()
-	if v == nil {
-		return nil, errors.New("json node equal nil or not has.")
-	}
+func (f Filebase) Keys() []string {
+	i := f.Interface()
 	s := []string{}
-	switch t := (*v).(type) {
-	case map[string]interface{}:
-		for key, _ := range t {
-			s = append(s, key)
-		}
-		return s, nil
+	for key, _ := range i.(map[string]interface{}) {
+		s = append(s, key)
 	}
-	return nil, errors.New("KeyList() => json not map")
+	return s
 }
 
 //This get len, check if array.
@@ -262,44 +247,7 @@ func (f Filebase) Keys() ([]string, error) {
 // If json node is array then return len(array) & nil.
 //
 // else then return -1 & error.
-func (f Filebase) Len() (int, error) {
-	v, _ := f.GetInterface()
-	if v == nil {
-		return -1, errors.New("json node equal nil or not has.")
-	}
-	switch t := (*v).(type) {
-	case []interface{}:
-		return len(t), nil
-	}
-	return -1, errors.New("Len() => json not array")
-}
-
-// [regexp(string value) => type]
-//  ".*" => string
-//  [1-9][0-9]* => int
-//  [1-9][0-9]*.[0-9]*[1-9] => float
-//  (true|false) => bool
-//  null => null
-//  nil => [NotHasChild]
-// example
-//  if fb.Child("class") == `"string"`{}
-//  if fb.Child("id") == "12"{}
-//  if fb.Child("id") == "true"{}
-//  if fb.Child("id") == "null"{} // null value
-//  if Child("id???") == "nil"{} // not has child!
-func (f Filebase) String() string {
-	b, err := f.Bytes()
-	if err != nil {
-		return "nil"
-	}
-	return string(b)
-}
-
-func (f Filebase) Bytes() ([]byte, error) {
-	v, err := f.GetInterface()
-	if err != nil {
-		return nil, errors.New("has not child")
-	}
-	b, _ := json.MarshalIndent(*v, "", "\t")
-	return b, nil
+func (f Filebase) Len() int {
+	i := f.Interface()
+	return len(i.([]interface{}))
 }
